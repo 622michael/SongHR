@@ -33,7 +33,7 @@ def log(request):
 	track_id = results["tracks"]["items"][0]["id"]
 	print track_id
 
-	data_sample = Listen.objects.create(spotify_id = track_id)
+	data_sample = Listen.objects.create(song_spotify_id = track_id)
 	data_sample.save
 
 	response = HttpResponse("", status = 202)
