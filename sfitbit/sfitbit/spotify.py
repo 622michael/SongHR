@@ -18,7 +18,6 @@ from models import Listen
 
 @csrf_exempt
 def log(request):
-	print request
 	if request.method == "GET":
 		not_found_response = HttpResponse("", status = 404)
 		return not_found_response
