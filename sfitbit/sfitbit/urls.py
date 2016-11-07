@@ -21,6 +21,7 @@ import fitbit
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^log/track/', spotify.log),
+    url(r'^log/end', spotify.end_log),
     url(r'^user/new/', fitbit.permissions_request),
     url(r'^user/fitbit/register', fitbit.authorize)
 ]

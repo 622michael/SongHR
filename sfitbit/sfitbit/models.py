@@ -4,7 +4,9 @@ from django.db import models
 ## listened to.
 class Listen(models.Model):
 	song_spotify_id = models.CharField(max_length = 22)
-	listened_at = models.DateTimeField(auto_now_add = True)
+	start = models.DateTimeField(auto_now_add = True)
+	end = models.DateTimeField(auto_now = True, null = True)
+	ended = models.IntegerField(default = 0)
 
 
 class User(models.Model):
