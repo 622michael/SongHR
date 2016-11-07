@@ -64,7 +64,7 @@ def end_log(request):
 	if started_listen.ended is 1:
 		return HttpResponse("", status = 409)
 
-	started_listen.ended  = True
+	started_listen.ended  = 1
 	started_listen.save
 
 	return HttpResponse("", status = 202)
