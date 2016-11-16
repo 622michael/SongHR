@@ -11,7 +11,12 @@ class Listen(models.Model):
 
 class User(models.Model):
 	fitbit_id = models.CharField(max_length = 25)
-	access_token = models.CharField(max_length = 260)
-	scope= models.CharField(max_length = 260)
-	refresh_token= models.CharField(max_length = 64)
-	access_token_expiration = models.DateTimeField()
+	fitbit_access_token = models.CharField(max_length = 260)
+	fitbit_scope = models.CharField(max_length = 260)
+	fitbit_refresh_token= models.CharField(max_length = 64)
+	fitbit_access_token_expiration = models.DateTimeField()
+
+	spotify_access_token = models.CharField(max_length = 260, null = True)
+	spotify_scope = models.CharField(max_length = 260, null = True)
+	spotify_refresh_token= models.CharField(max_length = 131, null = True)
+	spotify_access_token_expiration = models.DateTimeField(null = True)

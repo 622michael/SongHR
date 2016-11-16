@@ -51,19 +51,19 @@ def authorize(request):
 
 	try:
 		user = User.objects.get(fitbit_id = user_id)
-		user.access_token = access_token
-		user.scope = scope
-		user.refresh_token = refresh_token
-		user.access_token_expiration = expiration_date
+		user.fitbit_access_token = access_token
+		user.fitbit_scope = scope
+		user.fitbit_refresh_token = refresh_token
+		user.fitbit_access_token_expiration = expiration_date
 		user.save()
 
 		return HttpResponse("", status = 204)
 	except:
 		user = User.objects.create( fitbit_id = user_id, 
-								access_token = access_token, 
-								access_token_expiration = expiration_date,
-								scope = scope, 
-								refresh_token = refresh_token)
+								fitbit_access_token = access_token, 
+								fitbit_access_token_expiration = expiration_date,
+								fitbit_scope = scope, 
+								fitbit_refresh_token = refresh_token)
 		user.save()
 
 	return HttpResponse("", status = 202)
@@ -91,12 +91,12 @@ def request_access_info (code = "", refresh_token = "", grant_type = "authorizat
 ##	access token if it is out of date
 
 def api_request_header_for(user):
-	expiration_date = user.access_token_expiration
+	expiration_date = user.fitbit_access_token_expiration
 
 	if expiration_date < datetime.now() and not settings.TESTING:
 		refresh_access_for_user(user)
 
-	headers = {'Authorization': 'Bearer ' + user.access_token}
+	headers = {'Authorization': 'Bearer ' + user.fitibt_access_token}
 	return headers
 
 ##	Refresh Access
@@ -112,9 +112,9 @@ def refresh_access_for_user(user):
 
 	expiration_date = timezone.now() + timedelta(seconds = access_info["expires_in"])
 	
-	user.access_token = access_info["access_token"]
-	user.refresh_token = access_info["refresh_token"]
-	user.access_token_expiration = fitbit_time.string_for_date(expiration_date)
+	user.fitbit_access_token = access_info["access_token"]
+	user.fitbit_refresh_token = access_info["refresh_token"]
+	user.fitbit_access_token_expiration = fitbit_time.string_for_date(expiration_date)
 	user.save()
 
 ## Sync Heart Rate

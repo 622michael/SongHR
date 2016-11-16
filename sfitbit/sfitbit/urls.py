@@ -23,5 +23,6 @@ urlpatterns = [
     url(r'^log/track/', spotify.log),
     url(r'^log/end', spotify.end_log),
     url(r'^user/new/', fitbit.permissions_request),
-    url(r'^user/fitbit/register', fitbit.authorize)
+    url(r'^user/fitbit/register', fitbit.authorize),
+    url(r'^user/spotify/register', spotify.authorize)
 ]

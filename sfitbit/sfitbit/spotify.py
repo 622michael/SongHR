@@ -2,13 +2,104 @@ import spotipy
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
-from models import Listen
+from models import Listen, User
+import json, requests
+from datetime import datetime, timedelta
 
 ## Responsible for handling all spotify entries
 ## into the database.
 ## ---------------------------------------------
 
+client_id = "404f9c1778dd4730812ab807ca52aeff"
+access_token_request_url = "https://accounts.spotify.com/api/token"
+base_64_clinet_id_secret_encode = "NDA0ZjljMTc3OGRkNDczMDgxMmFiODA3Y2E1MmFlZmY6MmUyNjE5ZWE1MzZlNDEyM2E2ZmNkYTdlMGIyM2FjYzQ="
+spotify_redirect = "http://127.0.0.1:8000/user/spotify/register"
 
+
+##	Authorize
+##  --------------------------------------
+##	handles the request from the spotify server	
+##  after a new user authorizes the app
+##
+def authorize(request):
+	access_info, errors = request_access_info(code = request.GET['code'])
+	if errors is not None:
+		print errors
+		return HttpResponse("", status = 502)
+
+	access_token = access_info["access_token"]
+	refresh_token = access_info["refresh_token"]
+	expiration_date = timezone.now() + timedelta(seconds = access_info["expires_in"])
+
+	try:
+		user = User.objects.first()
+		user.spotify_access_token = access_token
+		user.spotify_refresh_token = refresh_token
+		user.spotify_access_token_expiration = expiration_date
+		user.save()
+
+		return HttpResponse("", status = 204)
+	except:
+		user = User.objects.create( spotify_access_token = access_token, 
+								spotify_access_token_expiration = expiration_date,
+								spotify_scope = scope, 
+								spotify_refresh_token = refresh_token)
+		user.save()
+
+	return HttpResponse("", status = 202)
+
+##	Request Access Info
+##  --------------------------------------
+##	used get the user's authorization code 
+##	param code is the code from spotify server
+##	returns access token, scope, refresh token
+
+def request_access_info (code = "", refresh_token = "", grant_type = "authorization_code"):
+	parameters = {'code': code, 'grant_type': grant_type, 'client_id': client_id, 'refresh_token': refresh_token, 'redirect_uri': spotify_redirect}
+	headers = {"content-type":"application/x-www-form-urlencoded", "Authorization": "Basic " + base_64_clinet_id_secret_encode}
+	response = requests.post(access_token_request_url, headers= headers, data= parameters)
+	json_response = json.loads(response.content)
+	print json_response
+	if json_response.get('success', True) is False:
+		return None, json_response['errors']
+
+	return json_response, None
+
+##	Request Header
+##  --------------------------------------
+##	returns the header necessary to make
+## 	an api calls. It also refreshes the
+##	access token if it is out of date
+
+def api_request_header_for(user):
+	expiration_date = user.spoitfy_access_token_expiration
+
+	if expiration_date < datetime.now() and not settings.TESTING:
+		refresh_access_for_user(user)
+
+	headers = {'Authorization': 'Bearer ' + user.spotify_access_token}
+	return headers
+
+##	Refresh Access
+##  --------------------------------------
+##	uses the refresh token to refresh the access token	
+##
+##
+def refresh_access_for_user(user):
+	access_info, errors = request_access_info(refresh_token = user.refresh_token, grant_type = "refresh_token")
+	if errors is not None:
+		return None
+
+
+	expiration_date = timezone.now() + timedelta(seconds = access_info["expires_in"])
+	
+	user.spotify_access_token = access_info["access_token"]
+	user.spotify_refresh_token = access_info["refresh_token"]
+	user.spotify_access_token_expiration = fitbit_time.string_for_date(expiration_date)
+	user.save()
+
+##	Log
+##  --------------------------------------
 ## Takes a title, album, and artist and records
 ## that it has been listened to. Uses the Spotify
 ## API to search for the song and selects only
@@ -37,6 +128,8 @@ def log(request):
 	response = HttpResponse("", status = 202)
 	return response
 
+##	End Log
+##  --------------------------------------
 ## Takes a title, album, and artist and records
 ## that it has been listened to. Uses the Spotify
 ## API to search for the song and selects only
@@ -70,6 +163,11 @@ def end_log(request):
 
 	return HttpResponse("", status = 202)
 
+##	Song Id
+##  --------------------------------------
+##  Uses spotipy to query the spotify API
+##  with the artist, album, and track. Returns
+##  the ID of the first result.
 
 def song_id(track, album, artist):
 	sp = spotipy.Spotify()
