@@ -2,7 +2,7 @@ import spotipy
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
-from models import Listen, User
+from models import Listen, User, Track, Artist, Album
 import json, requests
 from datetime import datetime, timedelta
 
@@ -122,7 +122,8 @@ def log(request):
 	except:
 		return HttpResponse("", status = 404)
 
-	data_sample = Listen.objects.create(song_spotify_id = track_id)
+	data_sample = Listen.objects.create(song_spotify_id = track_id,
+										track = save_track_from_spotify_id(track_id))
 	data_sample.save()
 
 	response = HttpResponse("", status = 202)
@@ -176,3 +177,50 @@ def song_id(track, album, artist):
 	track_id = results["tracks"]["items"][0]["id"]
 
 	return track_id
+
+##	Song Id
+##  --------------------------------------
+##  Uses spotipy to query the spotify API
+##  for the information about the song given by the
+##  track's spotify id. An object is created if and
+##  only if the id doesn't already exist in the database
+##  either returns the id of the new object or the 
+##  object in the database.
+
+def save_track_from_spotify_id(track_id):
+	try:
+		track = Track.objects.get(spotify_id = track_id)
+	except:
+		sp = spotipy.Spotify()
+		track_json = sp.track(track_id)
+		album_json = track_json["album"]
+
+		try:
+			album = Album.objects.get(spotify_id = album_json["id"])
+		except:
+			album = Album.objects.create(spotify_id = album_json["id"],
+										 name = album_json["name"])
+			album.save()
+
+		track = Track.objects.create(spotify_id = track_id,
+									 name = track_json["name"],
+									 album = album)
+		track.save()
+
+		for artist_json in track_json["artists"]:
+			try:
+				artist = Artist.objects.get(spotify_id = artist_json["id"])
+			except: 
+				artist = Artist.objects.create(spotify_id = artist_json["id"],
+												name = artist_json)
+				artist.albums.add(album)
+				artist.save()
+
+				track.artists.add(artist)
+		track.save()
+		print "Added %s..." % track.name
+
+	return track
+
+
+		
