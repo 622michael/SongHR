@@ -34,6 +34,7 @@ class Track(models.Model):
 class Listen(models.Model):
 	song_spotify_id = models.CharField(max_length = 22)
 	start = models.DateTimeField(auto_now_add = True)
-	end = models.DateTimeField(auto_now = True, null = True)
+	end = models.DateTimeField(null = True)
 	ended = models.IntegerField(default = 0)
 	track = models.ForeignKey(Track, on_delete = models.CASCADE, null = True)
+	average_heart_rate = models.DecimalField(max_digits = 6, decimal_places = 2, null = True)

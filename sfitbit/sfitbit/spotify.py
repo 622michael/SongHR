@@ -151,13 +151,13 @@ def end_log(request):
 		return HttpResponse("", status = 404)
 
 	started_listen = Listen.objects.filter(song_spotify_id = track_id).latest('start')
-	print started_listen.id
 	if started_listen is None:
 		return HttpResponse("", status = 404)
 	if started_listen.ended is 1:
 		return HttpResponse("", status = 409)
 
 	started_listen.ended  = 1
+	started_listen.end = timezone.now()
 	started_listen.save()
 
 	return HttpResponse("", status = 202)

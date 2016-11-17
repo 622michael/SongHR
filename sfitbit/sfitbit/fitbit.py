@@ -2,9 +2,10 @@ from django.http import HttpResponse, HttpResponseRedirect
 import json, requests
 from django.utils import timezone
 import urllib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from models import User, Listen
 from fitbit_time import string_for_date
+import pytz
 
 client_id = "227XGW"
 scope_request_url = "https://www.fitbit.com/oauth2/authorize?"
@@ -117,6 +118,21 @@ def refresh_access_for_user(user):
 	user.fitbit_access_token_expiration = string_for_date(expiration_date)
 	user.save()
 
+def heart_rate_data_for_listen(listen):
+	local = pytz.timezone("US/Eastern")
+	local_listen_start = listen.start.astimezone(local)
+	local_listen_end = listen.end.astimezone(local)
+
+	date = local_listen_start.strftime("%Y-%m-%d")
+	start = local_listen_start.strftime("%H:%M")
+	end = local_listen_end.strftime("%H:%M")
+
+	fitted_api_call = heartrate_api_call % {"date": date, "end": end, "start": start}
+	headers = api_request_header_for(User.objects.first())
+	response = requests.get(fitted_api_call, headers = headers)
+	json_response = json.loads(response.content)
+
+
 ## Average Heart Rate During Listen
 ## --------------------------------------
 ## Gets the average heart rate during the time
@@ -124,17 +140,49 @@ def refresh_access_for_user(user):
 ## info.
 
 def average_heart_rate_during_listen(listen):
-	date = listen.start.strftime("%Y-%m-%d")
-	start = listen.start.strftime("%H:%M")
-	end = listen.end.strftime("%H:%M")
+	json_response = heart_rate_data_for_listen(listen)
+
+	running_sum = 0.0 
+	running_duration = 0.0
+	try:
+		data_set = json_response["activities-heart-intraday"]["dataset"]
+	except:
+		return
+
+	print "\n" 
+	print "----- Listen on %(date)s %(time)s - %(end_time)s ------" % {"date": date, "time": start, "end_time": end}  
+	size = len(data_set)
+	for i in range(0, size):
+		data = data_set[i]
+		data_point_time = datetime.strptime(data["time"], "%H:%M:%S")
+
+		if i is size - 1:
+			next_time = datetime(year = data_point_time.year, month = data_point_time.month, day = data_point_time.day, 
+				hour = local_listen_end.hour, second = local_listen_end.second, minute = local_listen_end.minute)
+		else:
+			next_time = datetime.strptime(data_set[i + 1]["time"], "%H:%M:%S")
+
+		duration = (next_time - data_point_time).total_seconds()
+
+		print "%s \t %s" % (data["time"], data["value"])
+		weighted_value = duration * float(data["value"])
+		running_sum += weighted_value
+		running_duration += duration
+
+	if running_sum == 0:
+		return
+
+	total_duration = (local_listen_end - local_listen_start).total_seconds()
+	average = running_sum/running_duration
+
+	print "AVERAGE: %2.0f" % average
+	print "-------------------------------------------"
+	print "\n"
+
+	return average
 
 
-	fitted_api_call = heartrate_api_call % {"date": date, "end": end, "start": start}
-	headers = api_request_header_for(User.objects.first())
-	response = requests.get(fitted_api_call, headers = headers)
-	json_response = json.loads(response.content)
 
-	print json_response
 
 
 
