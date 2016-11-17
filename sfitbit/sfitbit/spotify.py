@@ -72,9 +72,9 @@ def request_access_info (code = "", refresh_token = "", grant_type = "authorizat
 ##	access token if it is out of date
 
 def api_request_header_for(user):
-	expiration_date = user.spoitfy_access_token_expiration
+	expiration_date = user.spotify_access_token_expiration
 
-	if expiration_date < datetime.now() and not settings.TESTING:
+	if expiration_date < timezone.now():
 		refresh_access_for_user(user)
 
 	headers = {'Authorization': 'Bearer ' + user.spotify_access_token}
@@ -86,7 +86,7 @@ def api_request_header_for(user):
 ##
 ##
 def refresh_access_for_user(user):
-	access_info, errors = request_access_info(refresh_token = user.refresh_token, grant_type = "refresh_token")
+	access_info, errors = request_access_info(refresh_token = user.spotify_refresh_token, grant_type = "refresh_token")
 	if errors is not None:
 		return None
 
@@ -94,8 +94,7 @@ def refresh_access_for_user(user):
 	expiration_date = timezone.now() + timedelta(seconds = access_info["expires_in"])
 	
 	user.spotify_access_token = access_info["access_token"]
-	user.spotify_refresh_token = access_info["refresh_token"]
-	user.spotify_access_token_expiration = fitbit_time.string_for_date(expiration_date)
+	user.spotify_access_token_expiration = expiration_date
 	user.save()
 
 ##	Log
@@ -122,8 +121,7 @@ def log(request):
 	except:
 		return HttpResponse("", status = 404)
 
-	data_sample = Listen.objects.create(song_spotify_id = track_id,
-										track = save_track_from_spotify_id(track_id))
+	data_sample = Listen.objects.create(song_spotify_id = track_id)
 	data_sample.save()
 
 	response = HttpResponse("", status = 202)
@@ -222,5 +220,39 @@ def save_track_from_spotify_id(track_id):
 
 	return track
 
+##	Audio Features For (track)
+##  --------------------------------------
+##  Makes a call to the spotify API for the
+##  audio features of a song. Returns a list
+##  with the json and the errors.
 
-		
+audio_featurers_url = "https://api.spotify.com/v1/audio-features/*"
+
+def audio_features_for(track):
+	audio_featurers_url_fitted = audio_featurers_url.replace("*", track.spotify_id)
+	headers = api_request_header_for(User.objects.first())
+	response = requests.get(audio_featurers_url_fitted, headers = headers)
+	json_response = json.loads(response.content)
+
+	try:
+		json_response["key"]
+	except:
+		return None, json_response["errors"]
+
+	return json_response, None
+
+
+
+##	Save Track Tempo
+##  --------------------------------------
+##  Uses the spotify ID in the Track record
+##  to get the audio features for a song from
+##  the spotify api.
+
+def save_track_tempo(track):
+	audio_features, errors = audio_features_for(track)
+	if errors is not None:
+		return
+
+	track.tempo = audio_features["tempo"]
+	track.save()

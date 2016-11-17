@@ -20,13 +20,14 @@ class Artist(models.Model):
 	spotify_id = models.CharField(max_length = 22)
 	name = models.CharField(max_length = 260)
 	albums = models.ManyToManyField(Album)
-	
 
 class Track(models.Model):
 	spotify_id = models.CharField(max_length = 22)
 	name = models.CharField(max_length = 260)
 	album = models.ForeignKey(Album, on_delete = models.CASCADE)
 	artists = models.ManyToManyField(Artist)
+
+	tempo = models.DecimalField(max_digits = 10, decimal_places = 3, null = True)
 
 ## Represents an instances of a song being
 ## listened to.
