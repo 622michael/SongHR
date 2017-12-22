@@ -8,6 +8,3 @@ When this was developed, the Spotify API did not release user's recently played 
 
 There are Django management commands that allow the admin to view graphs that show the correlation between the heartrate and tempo of songs.
 
-This provides the basis for a study that could be conducted to determine if there is any correlation between the loudness or tempo of a song.
-
-
