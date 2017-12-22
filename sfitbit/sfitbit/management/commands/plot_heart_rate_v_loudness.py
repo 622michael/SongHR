@@ -46,7 +46,7 @@ class Command(BaseCommand):
 					continue
 
 				audio_analysis, errors = spotify.audio_analysis_for(listen.track)
-				tempos, times = spotify.tempos(listen.track, data = audio_analysis)
+				tempos, times = spotify.loudness(listen.track, data = audio_analysis)
 
 				for i in range(0, len(times)):
 					tempo_time = times[i]

@@ -8,4 +8,4 @@ from sfitbit import spotify
 class Command(BaseCommand):
 	def handle(self, *args, **options):
 		for track in Track.objects.all():
-			spotify.save_track_tempo(track)
+			spotify.save_track_features(track)

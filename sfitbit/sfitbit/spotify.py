@@ -241,18 +241,75 @@ def audio_features_for(track):
 
 	return json_response, None
 
-
-
-##	Save Track Tempo
+##	Audio Analysis For (track)
 ##  --------------------------------------
-##  Uses the spotify ID in the Track record
-##  to get the audio features for a song from
-##  the spotify api.
+##  Makes a call to the spotify API for the
+##  audio analysis of a song. Returns a list
+##  with the json and the errors.
 
-def save_track_tempo(track):
+audio_analysis_url = "https://api.spotify.com/v1/audio-analysis/*"
+
+def audio_analysis_for(track):
+	audio_analysis_url_fitted = audio_analysis_url.replace("*", track.spotify_id)
+	headers = api_request_header_for(User.objects.first())
+	response = requests.get(audio_analysis_url_fitted, headers = headers)
+	json_response = json.loads(response.content)
+
+	return json_response, None
+
+
+##	Save Track Features
+##  --------------------------------------
+##  Saves the average tempo, loudness to the track.
+##
+
+def save_track_features(track):
 	audio_features, errors = audio_features_for(track)
 	if errors is not None:
 		return
 
+	track.duration = audio_features["duration_ms"]/1000.0
+	track.loudness = audio_features["loudness"]
 	track.tempo = audio_features["tempo"]
 	track.save()
+
+##	Tempos
+##  --------------------------------------
+##  Parses the audio analysis for a given
+##  track and returns a list of all the tempos
+##  and their times.
+
+def tempos(track, data = None):
+	if data is not None:
+		audio_analysis = data
+	else:
+		audio_analysis = audio_analysis_for(track)
+
+	times = []
+	tempos = []
+	for section in audio_analysis["sections"]:
+		times.append(section["start"])
+		tempos.append(section["tempo"])
+
+	return tempos, times
+
+##	Loudness
+##  --------------------------------------
+##  Parses the audio analysis for a given
+##  track and returns a list of all the tempos
+##  and their times. If audio analysis is available,
+##  it should be passed in data.
+
+def loudness(track, data = None):
+	if data is not None:
+		audio_analysis = data
+	else:
+		audio_analysis, errors = audio_analysis_for(track)
+
+	times = []
+	loudness = []
+	for section in audio_analysis["sections"]:
+		times.append(section["start"])
+		loudness.append(section["loudness"])
+
+	return loudness, times

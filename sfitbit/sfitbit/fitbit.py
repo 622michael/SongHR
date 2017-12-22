@@ -118,6 +118,11 @@ def refresh_access_for_user(user):
 	user.fitbit_access_token_expiration = string_for_date(expiration_date)
 	user.save()
 
+## Heart Rate Data For Listen
+## --------------------------------------
+## Returns all the data for a listen from
+## the Fitbit API. A JSON object is returned
+
 def heart_rate_data_for_listen(listen):
 	local = pytz.timezone("US/Eastern")
 	local_listen_start = listen.start.astimezone(local)
@@ -128,9 +133,13 @@ def heart_rate_data_for_listen(listen):
 	end = local_listen_end.strftime("%H:%M")
 
 	fitted_api_call = heartrate_api_call % {"date": date, "end": end, "start": start}
+	print fitted_api_call
 	headers = api_request_header_for(User.objects.first())
 	response = requests.get(fitted_api_call, headers = headers)
 	json_response = json.loads(response.content)
+
+	print json_response
+	return json_response
 
 
 ## Average Heart Rate During Listen
@@ -139,8 +148,15 @@ def heart_rate_data_for_listen(listen):
 ## of the listen from the FitBit Intraday access
 ## info.
 
-def average_heart_rate_during_listen(listen):
-	json_response = heart_rate_data_for_listen(listen)
+def average_heart_rate_during_listen(listen, data = None):
+	local = pytz.timezone("US/Eastern")
+	local_listen_start = listen.start.astimezone(local)
+	local_listen_end = listen.end.astimezone(local)
+
+	if data is None:
+		json_response = heart_rate_data_for_listen(listen)
+	else:
+		json_response = data
 
 	running_sum = 0.0 
 	running_duration = 0.0
@@ -150,7 +166,7 @@ def average_heart_rate_during_listen(listen):
 		return
 
 	print "\n" 
-	print "----- Listen on %(date)s %(time)s - %(end_time)s ------" % {"date": date, "time": start, "end_time": end}  
+	print "------------ Listen %(name)s ------------" % {"name": listen.track.name}  
 	size = len(data_set)
 	for i in range(0, size):
 		data = data_set[i]
